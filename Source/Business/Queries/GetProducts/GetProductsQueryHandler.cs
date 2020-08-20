@@ -1,4 +1,5 @@
-﻿using Business.Models;
+﻿using Business.Interfaces;
+using Business.Models;
 using Common;
 using Common.Exceptions;
 using Domain.Entities;
@@ -7,13 +8,12 @@ using MediatR;
 using Microsoft.Extensions.Logging;
 using Persistence.Interfaces;
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
-[assembly: InternalsVisibleTo("Tests.Business")]
 namespace Business.Queries.GetProducts
 {
     /// <summary>
@@ -24,11 +24,13 @@ namespace Business.Queries.GetProducts
     {
         private readonly IRepository<Product> _repository;
         private readonly ILogger<GetProductsQueryHandler> _logger;
+        private readonly IEmphasizeService _emphasizeService;
 
-        public GetProductsQueryHandler(IRepository<Product> repository, ILogger<GetProductsQueryHandler> logger)
+        public GetProductsQueryHandler(IRepository<Product> repository, ILogger<GetProductsQueryHandler> logger, IEmphasizeService emphasizeService)
         {
             _repository = repository;
             _logger = logger;
+            _emphasizeService = emphasizeService;
         }
 
         public async Task<GetProductsResponse> Handle(GetProductsQuery request, CancellationToken cancellationToken = default)
@@ -48,18 +50,43 @@ namespace Business.Queries.GetProducts
 
                 // emphasize words
                 // get necessary data for filter object 
+                var sizesHash = new HashSet<string>();
+                var frequencyCounter = new Dictionary<string, int>();
                 var minimumPrice = float.MaxValue;
                 var maximumPrice = float.MinValue;
 
                 foreach (var entity in entities)
                 {
+                    // emphasize words
+                    if (!request.HighlightKeywords.IsNullOrEmpty())
+                    {
+                        entity.Description = _emphasizeService.Emphasize(entity.Description, request.HighlightKeywords);
+                    }
+
+                    // set frequency of words
+                    var words = entity.Description.Split(_emphasizeService.GetSeparators(), StringSplitOptions.RemoveEmptyEntries);
+                    foreach (var word in words)
+                    {
+                        frequencyCounter[word] = frequencyCounter.ContainsKey(word) ? frequencyCounter[word] + 1 : 1;
+                    }
+
                     // set min
                     if (entity.Price < minimumPrice) minimumPrice = entity.Price;
 
                     // set max
                     if (entity.Price > maximumPrice) maximumPrice = entity.Price;
 
+                    sizesHash.AddRange(entity.Sizes);
                 }
+
+                // take common words according to our business needs
+                // top 10 after discarding top 5
+                var commonWords = frequencyCounter
+                                                            .OrderByDescending(x => x.Value)
+                                                            .Skip(5)
+                                                            .Take(10)
+                                                            .Select(x => x.Key)
+                                                            .ToList();
 
                 return new GetProductsResponse()
                 {
@@ -67,7 +94,9 @@ namespace Business.Queries.GetProducts
                     Filter = new ProductFilter()
                     {
                         MaximumPrice = maximumPrice,
-                        MinimumPrice = minimumPrice
+                        MinimumPrice = minimumPrice,
+                        CommonWords = commonWords,
+                        Sizes = sizesHash
                     }
                 };
             }
