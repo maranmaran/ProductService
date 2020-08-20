@@ -9,12 +9,34 @@ using Newtonsoft.Json.Serialization;
 using System;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Reflection;
+using API.LibraryConfigurations.MediatR;
+using Business.Queries.GetProducts;
+using FluentValidation.AspNetCore;
+using MediatR;
 
 namespace API
 {
     public static class ServiceCollectionExtensions
     {
+        /// <summary>
+        /// Configures MediatR for request pipeline
+        /// With logging and validation middleware
+        /// </summary>
+        public static void ConfigureMediatR(this IServiceCollection services)
+        {
+            var assemblies = new[]
+            {
+                Assembly.GetAssembly(typeof(GetProductsQuery)),
+            };
+
+            services.AddMediatR(assemblies.ToArray());
+            services.AddTransient(typeof(IPipelineBehavior<,>), typeof(ValidationBehavior<,>));
+            services.AddTransient(typeof(IPipelineBehavior<,>), typeof(LoggingBehavior<,>));
+
+        }
+
         /// <summary>
         /// Configures swagger ( Swashbuckle Core ) open api implementation
         /// For documentation and testing
@@ -39,9 +61,13 @@ namespace API
         /// Configures MVC, JSON options and fluent validators
         /// </summary>
         /// <param name="services"></param>
-        public static void ConfigureMvc(this IServiceCollection services)
+        public static void ConfigureMvcWithFluentValidation(this IServiceCollection services)
         {
             services.AddControllers()
+                .AddFluentValidation(fv => fv.RegisterValidatorsFromAssemblies(new[]
+                {
+                    Assembly.GetAssembly(typeof(GetProductsQuery)),
+                }))
                 .AddNewtonsoftJson(options =>
                 {
                     options.SerializerSettings.Converters.Add(new StringEnumConverter());
