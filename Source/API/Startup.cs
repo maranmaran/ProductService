@@ -36,6 +36,8 @@ namespace API
             services.ConfigurePersistanceLayer(Configuration);
 
             // external libraries
+            services.ConfigureMvcWithFluentValidation();
+            services.ConfigureMediatR();
             services.ConfigureSwagger();
             services.ConfigureLazyCache();
             NLogBuilder.ConfigureNLog("nlog.config");
@@ -44,7 +46,6 @@ namespace API
             services.ConfigureCommunication();
 
             // system configuration
-            services.ConfigureMvc();
             services.ConfigureResponseCompression(); // response compression
             services.ConfigureCors(Configuration); // Cors
         }

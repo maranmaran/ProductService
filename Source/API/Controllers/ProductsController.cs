@@ -1,4 +1,6 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Business.Queries.GetProducts;
+using MediatR;
+using Microsoft.AspNetCore.Mvc;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -26,7 +28,18 @@ namespace API.Controllers
         public async Task<IActionResult> Get([FromQuery] float? maxPrice = null, [FromQuery] string size = null, [FromQuery] string highlight = null, CancellationToken cancellationToken = default)
         {
 
-            return Ok($"My products with {maxPrice} {size} {highlight}");
+            #region Caching layer - not needed currently according to business needs but it is a improvements point.
+            //var cacheKey = $"GetProductsQuery{maxPrice}{size}{highlight}";
+
+            //var response = await Cache.GetOrAddAsync(
+            //    cacheKey,
+            //    entry => Mediator.Send(new GetProductsQuery(maxPrice, size, highlight), cancellationToken)
+            //);
+
+            //return Ok(response);
+            #endregion
+
+            return Ok(await Mediator.Send(new GetProductsQuery(maxPrice, size, highlight), cancellationToken));
         }
 
     }
