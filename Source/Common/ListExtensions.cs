@@ -14,4 +14,14 @@ namespace Common
         }
 
     }
+    public static class HashSetExtensions
+    {
+        /// <summary>
+        /// Adds range of values to hashset
+        /// </summary>
+        public static bool AddRange<T>(this HashSet<T> source, IEnumerable<T> items)
+        {
+            return items.Aggregate(true, (current, item) => current & source.Add(item));
+        }
+    }
 }

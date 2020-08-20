@@ -1,4 +1,6 @@
-﻿using Microsoft.Extensions.DependencyInjection;
+﻿using Business.Interfaces;
+using Business.Services;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace Business
 {
@@ -6,6 +8,7 @@ namespace Business
     {
         public static void RegisterBusinessServices(this IServiceCollection services)
         {
+            services.AddTransient<IEmphasizeService, EmphasizeService>();
         }
     }
 }
