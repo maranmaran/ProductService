@@ -1,6 +1,9 @@
 ﻿using API.Models;
+using Common.Exceptions;
+using FluentValidation;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
+using Newtonsoft.Json;
 using System;
 using System.Net;
 using System.Threading.Tasks;
@@ -42,6 +45,18 @@ namespace API.Middleware
                 Message = exception.Message,
             };
 
+            if (exception is FetchException fetchEx)
+            {
+                errorDetails.Status = HttpStatusCode.NotFound;
+                errorDetails.Message = fetchEx.Message;
+            }
+
+            if (exception is ValidationException validationEx)
+            {
+                errorDetails.Status = HttpStatusCode.BadRequest;
+                errorDetails.Message = validationEx.Message;
+                errorDetails.Errors = JsonConvert.SerializeObject(validationEx.Errors);
+            }
 
             await context.Response.WriteAsync(errorDetails.ToString());
         }
